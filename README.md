@@ -1,3 +1,15 @@
+Original [SparkFun AT Arduino Library](https://github.com/sparkfun/SparkFun_ESP8266_AT_Arduino_Library) updated with the following features:
+* Arbitrary HardwareSerials (e.g. Serial1, Serial2, Serial3 on Arduino Mega 2560) - [mararn1618](https://github.com/mararn1618/SparkFun_ESP8266_AT_Arduino_Library).
+* Buffer between ESP8266Client and ESP8266 for parsing AT controll commands - [mararn1618](https://github.com/mararn1618/SparkFun_ESP8266_AT_Arduino_Library).
+* Initial UDP support - [semiotproject](https://github.com/semiotproject/SparkFun_ESP8266_AT_Arduino_Library).
+
+TODO:
+* Finalize UDP support.
+* Update commands to [ESP8266_NONOS_SDK 2.0.0](https://github.com/espressif/ESP8266_NONOS_SDK); 2.1.0 seems to be buggy for me, keeps disconnecting and reconnecting the wifi in station mode.
+* Create separate project with ESP8266 WiFi Shield firmware building instructions as fork from [original repository](https://github.com/sparkfun/ESP8266_WiFi_Shield).
+
+
+
 SparkFun ESP8266 AT Arduino Library
 ========================================
 

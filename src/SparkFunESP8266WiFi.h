@@ -124,7 +124,7 @@ public:
 	ESP8266Class();
 
 
-	bool begin(unsigned long baudRate = 9600, esp8266_serial_port serialPort = ESP8266_SOFTWARE_SERIAL, HardwareSerial *hwSerial = 0);
+	bool begin(unsigned long baudRate = 115200, esp8266_serial_port serialPort = ESP8266_SOFTWARE_SERIAL, HardwareSerial *hwSerial = 0);
 
 	///////////////////////
 	// Basic AT Commands //
@@ -134,6 +134,7 @@ public:
 	int16_t getVersion(char * ATversion, char * SDKversion, char * compileTime);
 	bool echo(bool enable);
 	bool setBaud(unsigned long baud);
+	unsigned long getBaud();
 	
 	////////////////////
 	// WiFi Functions //
@@ -147,6 +148,8 @@ public:
 	int16_t localMAC(char * mac);
 	int16_t disconnect();
 	IPAddress localIP();
+	IPAddress remoteIP(uint8_t linkID);
+	uint16_t remotePort(uint8_t linkID);
 	
 	/////////////////////
 	// TCP/IP Commands //
@@ -161,6 +164,8 @@ public:
 	int16_t configureTCPServer(uint16_t port, uint8_t create = 1);
 	int16_t ping(IPAddress ip);
 	int16_t ping(char * server);
+	int16_t udpConnect(uint8_t linkID, const char * destination, uint16_t remote_port, uint16_t local_port, uint8_t udp_mode);
+	int16_t udpSend(uint8_t linkID, const uint8_t *buf, size_t size, const char * destination, uint16_t remote_port);
 		
 	//////////////////////////
 	// Custom GPIO Commands //
