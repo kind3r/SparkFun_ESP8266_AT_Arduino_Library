@@ -26,6 +26,7 @@ Distributed as-is; no warranty is given.
 #include <IPAddress.h>
 #include "SparkFunESP8266Client.h"
 #include "SparkFunESP8266Server.h"
+#include "SparkFunESP8266ClientReadBuffer.h"
 
 /////////////////////
 // Pin Definitions //
@@ -220,6 +221,8 @@ private:
 	esp8266_status _status;
 
 	uint8_t sync();
+
+	ESP8266ClientReadBuffer receiveBuffer;
 };
 
 extern ESP8266Class esp8266;

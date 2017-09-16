@@ -85,12 +85,12 @@ size_t ESP8266Client::write(const uint8_t *buf, size_t size)
 
 int ESP8266Client::available()
 {
-	return receiveBuffer.available();
+	return esp8266.available();
 }
 
 int ESP8266Client::read()
 {
-	return receiveBuffer.read();
+	return esp8266.read();
 }
 
 int ESP8266Client::read(uint8_t *buf, size_t size)

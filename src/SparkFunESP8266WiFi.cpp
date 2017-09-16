@@ -32,9 +32,9 @@ Distributed as-is; no warranty is given.
 char esp8266RxBuffer[ESP8266_RX_BUFFER_LEN];
 unsigned int bufferHead; // Holds position of latest byte placed in buffer.
 
-						 ////////////////////
-						 // Initialization //
-						 ////////////////////
+////////////////////
+// Initialization //
+////////////////////
 
 ESP8266Class::ESP8266Class()
 {
@@ -53,8 +53,8 @@ bool ESP8266Class::begin(unsigned long baudRate, esp8266_serial_port serialPort,
 	else if (serialPort == ESP8266_HARDWARE_SERIAL)
 	{
 		if (hwSerial == 0) {
-			Serial.begin(baudRate);
-			_serial = &Serial;
+			Serial2.begin(baudRate);
+			_serial = &Serial2;
 		}
 		else {
 			hwSerial->begin(baudRate);
@@ -62,6 +62,7 @@ bool ESP8266Class::begin(unsigned long baudRate, esp8266_serial_port serialPort,
 		}
 	}
 
+	receiveBuffer.setSerialPort(_serial);
 
 	if (test())
 	{
@@ -498,24 +499,24 @@ uint16_t ESP8266Class::remotePort(uint8_t linkID)
 
 int16_t ESP8266Class::tcpConnect(uint8_t linkID, const char * destination, uint16_t port, uint16_t keepAlive)
 {
-	print("AT");
-	print(ESP8266_TCP_CONNECT);
-	print('=');
-	print(linkID);
-	print(',');
-	print("\"TCP\",");
-	print("\"");
-	print(destination);
-	print("\",");
-	print(port);
+	_serial->print("AT");
+	_serial->print(ESP8266_TCP_CONNECT);
+	_serial->print('=');
+	_serial->print(linkID);
+	_serial->print(',');
+	_serial->print("\"TCP\",");
+	_serial->print("\"");
+	_serial->print(destination);
+	_serial->print("\",");
+	_serial->print(port);
 	if (keepAlive > 0)
 	{
-		print(',');
+		_serial->print(',');
 		// keepAlive is in units of 500 milliseconds.
 		// Max is 7200 * 500 = 3600000 ms = 60 minutes.
-		print(keepAlive / 500);
+		_serial->print(keepAlive / 500);
 	}
-	print("\r\n");
+	_serial->print("\r\n");
 	// Example good: CONNECT\r\n\r\nOK\r\n
 	// Example bad: DNS Fail\r\n\r\nERROR\r\n
 	// Example meh: ALREADY CONNECTED\r\n\r\nERROR\r\n
@@ -647,21 +648,21 @@ int16_t ESP8266Class::ping(char * server)
 
 int16_t ESP8266Class::udpConnect(uint8_t linkID, const char *destination, uint16_t remote_port, uint16_t local_port, uint8_t udp_mode)
 {
-    print("AT");
-    print(ESP8266_TCP_CONNECT);
-    print('=');
-    print(linkID);
-    print(',');
-    print("\"UDP\",");
-    print("\"");
-    print(destination);
-    print("\",");
-    print(remote_port);
-    print("\",");
-    print(local_port);
-    print("\",");
-    print(udp_mode);
-    print("\r\n");
+    _serial->print("AT");
+    _serial->print(ESP8266_TCP_CONNECT);
+    _serial->print('=');
+    _serial->print(linkID);
+    _serial->print(',');
+    _serial->print("\"UDP\",");
+    _serial->print("\"");
+    _serial->print(destination);
+    _serial->print("\",");
+    _serial->print(remote_port);
+    _serial->print("\",");
+    _serial->print(local_port);
+    _serial->print("\",");
+    _serial->print(udp_mode);
+    _serial->print("\r\n");
     // Example good: CONNECT\r\n\r\nOK\r\n
     // Example bad: DNS Fail\r\n\r\nERROR\r\n
     // Example meh: ALREADY CONNECTED\r\n\r\nERROR\r\n
@@ -768,12 +769,12 @@ size_t ESP8266Class::write(uint8_t c)
 
 int ESP8266Class::available()
 {
-	return _serial->available();
+	return receiveBuffer.available();
 }
 
 int ESP8266Class::read()
 {
-	return _serial->read();
+	return receiveBuffer.read();
 }
 
 int ESP8266Class::peek()

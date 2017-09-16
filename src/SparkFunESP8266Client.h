@@ -61,7 +61,7 @@ public:
 	using Print::write;
 
 private:
-	ESP8266ClientReadBuffer receiveBuffer;
+	// ESP8266ClientReadBuffer receiveBuffer;
 	static uint16_t _srcport;
 	uint16_t  _socket;
 	bool ipMuxEn;

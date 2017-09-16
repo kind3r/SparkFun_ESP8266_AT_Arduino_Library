@@ -8,8 +8,10 @@ class ESP8266ClientReadBuffer {
 public:
 	int available();
 	int read();
+	void setSerialPort(Stream* serialPort);
 
 protected:
+	Stream* _serial;
 	char receiveBufferSize = 0;
 	uint8_t receiveBuffer[ESP8266_CLIENT_MAX_BUFFER_SIZE];
 
