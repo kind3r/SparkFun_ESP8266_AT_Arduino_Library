@@ -31,8 +31,8 @@ Distributed as-is; no warranty is given.
 /////////////////////
 // Pin Definitions //
 /////////////////////
-#define ESP8266_SW_RX	9	// ESP8266 UART0 RXI goes to Arduino pin 9
-#define ESP8266_SW_TX	8	// ESP8266 UART0 TXO goes to Arduino pin 8
+#define ESP8266_SW_RX	11	// ESP8266 UART0 RXI goes to Arduino pin 9
+#define ESP8266_SW_TX	10	// ESP8266 UART0 TXO goes to Arduino pin 8
 
 ///////////////////////////////
 // Command Response Timeouts //

@@ -18,7 +18,7 @@ protected:
 	void fillReceiveBuffer();
 	void truncateReceiveBufferHead(uint8_t startingOffset, uint8_t truncateLength);
 	void cleanReceiveBufferFromAT();
-	void cleanReceiveBufferFromAT(const char *atCommand, uint8_t additionalSuffixToKill);
+	void cleanReceiveBufferFromAT(const char *atCommand, uint8_t additionalSuffixToKill = 0, const char *untilText = 0);
 };
 
 #endif

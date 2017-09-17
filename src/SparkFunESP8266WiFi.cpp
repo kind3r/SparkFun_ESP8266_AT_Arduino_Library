@@ -42,6 +42,7 @@ ESP8266Class::ESP8266Class()
 		_state[i] = AVAILABLE;
 }
 
+// TODO: Remove static SoftwareSerial and use serial as parameter as it always initializes even if not used
 bool ESP8266Class::begin(unsigned long baudRate, esp8266_serial_port serialPort, HardwareSerial *hwSerial)
 {
 	_baud = baudRate;
@@ -53,8 +54,8 @@ bool ESP8266Class::begin(unsigned long baudRate, esp8266_serial_port serialPort,
 	else if (serialPort == ESP8266_HARDWARE_SERIAL)
 	{
 		if (hwSerial == 0) {
-			Serial2.begin(baudRate);
-			_serial = &Serial2;
+			Serial.begin(baudRate);
+			_serial = &Serial;
 		}
 		else {
 			hwSerial->begin(baudRate);
@@ -658,9 +659,9 @@ int16_t ESP8266Class::udpConnect(uint8_t linkID, const char *destination, uint16
     _serial->print(destination);
     _serial->print("\",");
     _serial->print(remote_port);
-    _serial->print("\",");
+    _serial->print(",");
     _serial->print(local_port);
-    _serial->print("\",");
+    _serial->print(",");
     _serial->print(udp_mode);
     _serial->print("\r\n");
     // Example good: CONNECT\r\n\r\nOK\r\n

@@ -45,35 +45,51 @@ void ESP8266ClientReadBuffer::truncateReceiveBufferHead(uint8_t startingOffset, 
 void ESP8266ClientReadBuffer::fillReceiveBuffer() {
 	//fill the receive buffer as much as possible from esp8266.read()
 
-	for (uint8_t attemps = 0; attemps < 5; attemps++) {//often 1st available() call does not yield all bytes => outer while
-		while (uint8_t availableBytes = _serial->available() > 0) {
-			for (; availableBytes > 0 && receiveBufferSize < ESP8266_CLIENT_MAX_BUFFER_SIZE; availableBytes--) {
-				receiveBuffer[receiveBufferSize++] = _serial->read();
+	if(_serial->available()) {
+		// Serial.println("Filling up receive buffer");
+		for (uint8_t attemps = 0; attemps < 5; attemps++) {//often 1st available() call does not yield all bytes => outer while
+			while (uint8_t availableBytes = _serial->available() > 0) {
+				for (; availableBytes > 0 && receiveBufferSize < ESP8266_CLIENT_MAX_BUFFER_SIZE; availableBytes--) {
+					receiveBuffer[receiveBufferSize++] = _serial->read();
+				}
+				delay(10);
 			}
 			delay(10);
 		}
-		delay(10);
-	}
 
-	this->cleanReceiveBufferFromAT();
+		this->cleanReceiveBufferFromAT();
+	}
 }
 
 void ESP8266ClientReadBuffer::cleanReceiveBufferFromAT() {
 	//get rid of these esp8266 commands
-	this->cleanReceiveBufferFromAT("\r\n\r\n+IPD", 5);//typical answer looks like \r\n\r\n+IPD,0,4:<payload>
+	this->cleanReceiveBufferFromAT("\r\n+IPD,", 3, ":");//typical answer looks like \r\n\r\n+IPD,0,4:<payload>
 	// TODO: further refine to properly parse the \r\n+IPD,<slot>,<lenght>:<payload> packet
 	// One major issue here with the current architecture is that even if we read the slot we don't know which client 
 	// to send the <payload> to as it will be sent by the client doing the reading. So in principle esp8266 should do
 	// reading and pass it to the client instance.
 }
 
-void ESP8266ClientReadBuffer::cleanReceiveBufferFromAT(const char *atCommand, uint8_t additionalSuffixToKill) {
+void ESP8266ClientReadBuffer::cleanReceiveBufferFromAT(const char *atCommand, uint8_t additionalSuffixToKill, const char *untilText) {
 	uint8_t atLen = strlen(atCommand);
 
 	//uint8_t offset = 0;
 	for (uint8_t offset = 0; offset <= receiveBufferSize - atLen; offset++) {
 		if (0 == memcmp((receiveBuffer + offset), atCommand, atLen)) {
+			// Serial.println("Found IPD");
 			//found the at command. KILL IT!
+			//go further until we find the next text as well
+			if(untilText != 0) {
+				uint8_t untilLen = strlen(untilText);
+				for(;additionalSuffixToKill <= receiveBufferSize - offset - atLen - untilLen; additionalSuffixToKill++) {
+					if(0 == memcmp((receiveBuffer + offset + atLen + additionalSuffixToKill), untilText, untilLen)) {
+						additionalSuffixToKill++;
+						break;
+					}
+				}
+			}
+			// Serial.print("Truncating from ");Serial.print(offset); Serial.print(" length ");Serial.print(atLen + additionalSuffixToKill);
+			// Serial.print(" remaining "); Serial.println(receiveBufferSize - atLen - additionalSuffixToKill);
 			this->truncateReceiveBufferHead(offset, atLen + additionalSuffixToKill);
 			break;
 		}
