@@ -688,16 +688,24 @@ int16_t ESP8266Class::udpSend(uint8_t linkID, const uint8_t *buf, size_t size, c
 {
     if (size > 2048)
             return ESP8266_CMD_BAD;
-
-    char params[8];
-    sprintf(params, "%d,%d,%s,%d", linkID, size, destination, remote_port);
-    sendCommand(ESP8266_TCP_SEND, ESP8266_CMD_SETUP, params);
+		
+		_serial->print("AT");
+		_serial->print(ESP8266_TCP_SEND);
+		_serial->print("=");
+		_serial->print(linkID);
+		_serial->print(",");
+		_serial->print(size);
+		_serial->print(",\"");
+		_serial->print(destination);
+		_serial->print("\",");
+		_serial->print(remotePort);
+		_serial->print("\r\n");
 
     int16_t rsp = readForResponses(RESPONSE_OK, RESPONSE_ERROR, COMMAND_RESPONSE_TIMEOUT);
     //if (rsp > 0)
     if (rsp != ESP8266_RSP_FAIL)
     {
-            print((const char *)buf);
+            _serial->print((const char *)buf);
 
             rsp = readForResponse("SEND OK", COMMAND_RESPONSE_TIMEOUT);
 
