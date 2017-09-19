@@ -60,7 +60,7 @@ uint8_t ESP8266UDP::begin(uint16_t local_port)
     if (_socket != ESP8266_SOCK_NOT_AVAIL)
     {
         esp8266._state[_socket] = TAKEN;
-        int16_t rsp = esp8266.udpConnect(_socket, "127.0.0.1", local_port, local_port, 2); // TODO: UDP mode
+        int16_t rsp = esp8266.udpConnect(_socket, "0.0.0.0", local_port, local_port, 2); // TODO: UDP mode
         return rsp;
     }
     _local_port = local_port;
@@ -98,6 +98,7 @@ size_t ESP8266UDP::write(const uint8_t *buffer, size_t size)
 {
     // TODO: separate to utils:
     IPAddress ip = remoteIP();
+    // Serial.print("UDP remote IP ");Serial.println(ip);
     char ipAddress[16];
     sprintf(ipAddress, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
     return esp8266.udpSend(_socket,buffer,size,ipAddress,remotePort());

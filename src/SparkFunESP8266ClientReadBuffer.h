@@ -8,6 +8,7 @@ class ESP8266ClientReadBuffer {
 public:
 	int available();
 	int read();
+	void flush();
 	void setSerialPort(Stream* serialPort);
 
 protected:

@@ -8,8 +8,8 @@ void ESP8266ClientReadBuffer::setSerialPort(Stream* serialPort)
 
 int ESP8266ClientReadBuffer::available()
 {
-	if (receiveBufferSize > 0)//client has already buffered some payload
-		return receiveBufferSize;
+	// if (receiveBufferSize > 0)//client has already buffered some payload
+	// 	return receiveBufferSize;
 
 	int available = _serial->available();
 	if (available == 0)
@@ -19,7 +19,7 @@ int ESP8266ClientReadBuffer::available()
 		// Check again just to be sure:
 		available = _serial->available();
 	}
-	return available;
+	return available + receiveBufferSize;
 }
 
 int ESP8266ClientReadBuffer::read()
@@ -34,6 +34,11 @@ int ESP8266ClientReadBuffer::read()
 	}
 
 	return -1;
+}
+
+void ESP8266ClientReadBuffer::flush() 
+{
+	receiveBufferSize = 0;
 }
 
 void ESP8266ClientReadBuffer::truncateReceiveBufferHead(uint8_t startingOffset, uint8_t truncateLength) {

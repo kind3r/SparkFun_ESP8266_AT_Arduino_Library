@@ -491,7 +491,7 @@ IPAddress ESP8266Class::remoteIP(uint8_t linkID)
 
 uint16_t ESP8266Class::remotePort(uint8_t linkID)
 {
-	_status.ipstatus[linkID].port;
+	return _status.ipstatus[linkID].port;
 }
 
 /////////////////////
@@ -689,23 +689,25 @@ int16_t ESP8266Class::udpSend(uint8_t linkID, const uint8_t *buf, size_t size, c
     if (size > 2048)
             return ESP8266_CMD_BAD;
 		
-		_serial->print("AT");
-		_serial->print(ESP8266_TCP_SEND);
-		_serial->print("=");
-		_serial->print(linkID);
-		_serial->print(",");
-		_serial->print(size);
-		_serial->print(",\"");
-		_serial->print(destination);
-		_serial->print("\",");
-		_serial->print(remotePort);
-		_serial->print("\r\n");
+	_serial->print("AT");
+	_serial->print(ESP8266_TCP_SEND);
+	_serial->print("=");
+	_serial->print(linkID);
+	_serial->print(",");
+	_serial->print(size);
+	_serial->print(",\"");
+	_serial->print(destination);
+	_serial->print("\",");
+	_serial->print(remote_port);
+	_serial->print("\r\n");
 
     int16_t rsp = readForResponses(RESPONSE_OK, RESPONSE_ERROR, COMMAND_RESPONSE_TIMEOUT);
     //if (rsp > 0)
     if (rsp != ESP8266_RSP_FAIL)
     {
-            _serial->print((const char *)buf);
+		for (size_t i = 0; i < size; i++)
+			write(buf[i]);
+            // _serial->print((const char *)buf);
 
             rsp = readForResponse("SEND OK", COMMAND_RESPONSE_TIMEOUT);
 
@@ -793,7 +795,8 @@ int ESP8266Class::peek()
 
 void ESP8266Class::flush()
 {
-	_serial->flush();
+	// _serial->flush();
+	receiveBuffer.flush();
 }
 
 //////////////////////////////////////////////////
