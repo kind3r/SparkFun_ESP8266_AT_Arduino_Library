@@ -795,8 +795,8 @@ int ESP8266Class::peek()
 
 void ESP8266Class::flush()
 {
-	// _serial->flush();
-	receiveBuffer.flush();
+	_serial->flush();
+	// receiveBuffer.flush();
 }
 
 //////////////////////////////////////////////////

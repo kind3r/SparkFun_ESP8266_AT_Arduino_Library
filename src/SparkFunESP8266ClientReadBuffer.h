@@ -2,24 +2,27 @@
 #define _SPARKFUNESP8266CLIENTBUFFER_H_
 #include <Arduino.h>
 
-#define ESP8266_CLIENT_MAX_BUFFER_SIZE 512
+#define ESP8266_CLIENT_MAX_BUFFER_SIZE 128
+#define ESP8266_CLIENT_MAX_BUFFER_COUNT 20
 
 class ESP8266ClientReadBuffer {
 public:
+	ESP8266ClientReadBuffer();
 	int available();
 	int read();
-	void flush();
 	void setSerialPort(Stream* serialPort);
 
 protected:
 	Stream* _serial;
-	uint8_t receiveBufferSize = 0;
-	uint8_t receiveBuffer[ESP8266_CLIENT_MAX_BUFFER_SIZE];
+	byte receiveBufferRead = 0;
+	byte receiveBufferWrite = 0;
+	uint8_t receiveBufferSize[ESP8266_CLIENT_MAX_BUFFER_COUNT];
+	uint8_t receiveBuffer[ESP8266_CLIENT_MAX_BUFFER_COUNT][ESP8266_CLIENT_MAX_BUFFER_SIZE];
 
 	void fillReceiveBuffer();
 	void truncateReceiveBufferHead(uint8_t startingOffset, uint8_t truncateLength);
-	void cleanReceiveBufferFromAT();
-	boolean cleanReceiveBufferFromAT(const char *atCommand, uint8_t additionalSuffixToKill = 0, const char *untilText = 0);
+	void incrementWriteBuffer();
+	void incrementReadBuffer();
 };
 
 #endif

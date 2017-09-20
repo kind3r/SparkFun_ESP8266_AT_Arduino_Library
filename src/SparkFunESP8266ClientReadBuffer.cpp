@@ -1,34 +1,33 @@
 #include "SparkFunESP8266ClientReadBuffer.h"
 #include "SparkFunESP8266WiFi.h"
 
-void ESP8266ClientReadBuffer::setSerialPort(Stream* serialPort) 
+ESP8266ClientReadBuffer::ESP8266ClientReadBuffer()
+{
+	for (byte i = 0; i < ESP8266_CLIENT_MAX_BUFFER_COUNT; i++)
+	{
+		receiveBufferSize[i] = 0;
+	}
+}
+
+void ESP8266ClientReadBuffer::setSerialPort(Stream *serialPort)
 {
 	_serial = serialPort;
 }
 
 int ESP8266ClientReadBuffer::available()
 {
-	// if (receiveBufferSize > 0)//client has already buffered some payload
-	// 	return receiveBufferSize;
-
-	int available = _serial->available();
-	if (available == 0)
-	{
-		// Delay for the amount of time it'd take to receive one character
-		delayMicroseconds((1 / esp8266._baud) * 10 * 1E6);
-		// Check again just to be sure:
-		available = _serial->available();
-	}
-	return available + receiveBufferSize;
+	fillReceiveBuffer();
+	incrementReadBuffer();
+	return receiveBufferSize[receiveBufferRead];
 }
 
 int ESP8266ClientReadBuffer::read()
 {
-	this->fillReceiveBuffer();//append to buffer BEFORE we read, so that chances are higher to detect AT commands
-
 	//read from buffer
-	if (receiveBufferSize > 0) {
-		uint8_t ret = receiveBuffer[0];
+	incrementReadBuffer();
+	if (receiveBufferSize[receiveBufferRead] > 0)
+	{
+		uint8_t ret = receiveBuffer[receiveBufferRead][0];
 		this->truncateReceiveBufferHead(0, 1);
 		return ret;
 	}
@@ -36,77 +35,119 @@ int ESP8266ClientReadBuffer::read()
 	return -1;
 }
 
-void ESP8266ClientReadBuffer::flush() 
+void ESP8266ClientReadBuffer::truncateReceiveBufferHead(uint8_t startingOffset, uint8_t truncateLength)
 {
-	receiveBufferSize = 0;
+	for (uint8_t i = startingOffset; i < receiveBufferSize[receiveBufferRead] - truncateLength; i++) //shift buffer content; todo: better implementation
+		receiveBuffer[receiveBufferRead][i] = receiveBuffer[receiveBufferRead][i + truncateLength];
+	receiveBufferSize[receiveBufferRead] -= truncateLength;
 }
 
-void ESP8266ClientReadBuffer::truncateReceiveBufferHead(uint8_t startingOffset, uint8_t truncateLength) {
-	for (uint8_t i = startingOffset; i < receiveBufferSize - truncateLength; i++)//shift buffer content; todo: better implementation
-		receiveBuffer[i] = receiveBuffer[i + truncateLength];
-	receiveBufferSize -= truncateLength;
-}
-
-void ESP8266ClientReadBuffer::fillReceiveBuffer() {
-	//fill the receive buffer as much as possible from esp8266.read()
-
-	if(_serial->available()) {
-		// Serial.print("Filling up receive buffer with ");Serial.println(_serial->available());
-		for (uint8_t attemps = 0; attemps < 5; attemps++) {//often 1st available() call does not yield all bytes => outer while
-			while (uint8_t availableBytes = _serial->available() > 0) {
-				for (; availableBytes > 0 && receiveBufferSize < ESP8266_CLIENT_MAX_BUFFER_SIZE; availableBytes--) {
-					receiveBuffer[receiveBufferSize++] = _serial->read();
-				}
-				delay(10);
-			}
-			delay(10);
-		}
-
-		this->cleanReceiveBufferFromAT();
-	}
-}
-
-void ESP8266ClientReadBuffer::cleanReceiveBufferFromAT() {
-	//get rid of these esp8266 commands
-	while(this->cleanReceiveBufferFromAT("\r\n+IPD,", 3, ":")) {}//typical answer looks like \r\n\r\n+IPD,0,4:<payload>
-	// TODO: further refine to properly parse the \r\n+IPD,<slot>,<lenght>:<payload> packet
-	// One major issue here with the current architecture is that even if we read the slot we don't know which client 
-	// to send the <payload> to as it will be sent by the client doing the reading. So in principle esp8266 should do
-	// reading and pass it to the client instance.
-}
-
-boolean ESP8266ClientReadBuffer::cleanReceiveBufferFromAT(const char *atCommand, uint8_t additionalSuffixToKill, const char *untilText) {
-	uint8_t atLen = strlen(atCommand);
-	boolean cleaned = false;
-
-	// Serial.print("Dumping buffer of size ");Serial.println(receiveBufferSize);
-	// for(uint8_t i=0; i < receiveBufferSize; i++) {
-	// 	Serial.print("0x");
-	// 	Serial.println(receiveBuffer[i], HEX);
+void ESP8266ClientReadBuffer::fillReceiveBuffer()
+{
+	// while(_serial->available()) {
+	// 	Serial.print(_serial->read(), HEX);Serial.print(' ');
 	// }
+	/*
++IPD 2C 30 2C 37 3A 7 0 40 0 21 24 5 
++IPD 2C 30 2C 37 3A 7 0 40 0 21 24 5 
++IPD 2C 30 2C 39 3A 9 0 40 0 E3 F0 0 3 10 
++IPD 2C 
++IPD 2C 30 2C 39 3A 9 0 40 0 E3 F0 0 3 10 
++IPD 2C 30 2C 39 3A 9 0 40 0 E3 F0 0 3 10 
++IPD 2C 30 2C 36 3A 6 0 60 0 0 3 
++IPD 2C 30 2C 37 3A 7 0 40 0 21 24 5 
++IPD 2C 30 2C 39 3A 9 0 40 0 E3 F0 0 3 10 
 
-	//uint8_t offset = 0;
-	for (uint8_t offset = 0; offset <= receiveBufferSize - atLen; offset++) {
-		if (0 == memcmp((receiveBuffer + offset), atCommand, atLen)) {
-			// Serial.println("Found IPD");
-			cleaned = true;
-			//found the at command. KILL IT!
-			//go further until we find the next text as well
-			if(untilText != 0) {
-				uint8_t untilLen = strlen(untilText);
-				for(;additionalSuffixToKill <= receiveBufferSize - offset - atLen - untilLen; additionalSuffixToKill++) {
-					if(0 == memcmp((receiveBuffer + offset + atLen + additionalSuffixToKill), untilText, untilLen)) {
-						additionalSuffixToKill++;
-						break;
-					}
+
++IPD 2C 30 2C 39 3A 9 0 40 0 E3 F0 0 3 10 
++IPD 2C 30 2C 37 3A 7 0 40 0 21 24 5 
++IPD 2C 30 2C 38 3A 8 0 50 0 3 0 0 9 
++IPD 0 3 10 D 2B 50 44 30 39 3A 0 0 E3 F0 0 3 D +IPD 2C 30 39 9 0 0 F0 0 10 A 2B 49 50 2C 30 36 3A 6 0 60 0 
++IPD 2C 30 2C 37 3A 7 0 40 0 21 24 5 
++IPD 2C 30 2C 39 3A 9 0 40 0 E3 F0 0 3 10 
++IPD 2C 30 2C 31 30 3A A 0 40 0 E4 13 0 3 C2 36 
++IPD 2C 30 2C 37 3A 7 0 40 0 21 24 5 
++IPD 2C 30 2C 39 3A 9 0 40 0 E3 F0 0 3 10 
+	*/
+	// if at least 10(header)+1(data) serial data is available and we don't allready have a ready buffer
+	// start reading the full packet (until the declared length from header)
+	int lastAvailable = _serial->available();
+	if (lastAvailable >= 12 && _serial->peek() == 13)
+	{
+		Serial.print("Reading from available ");Serial.print(lastAvailable);Serial.println(" bytes");
+		incrementWriteBuffer();
+
+		// Serial.println("Reading incomming packet");
+		char cmd[7];
+		// blank read until the + from +IPD (can be one or two CR+LF)
+		byte crlfSize = _serial->readBytesUntil('+', cmd, 6);
+		if (crlfSize > 5)
+		{
+			// then we don't really have an incomming packet do we ?
+			Serial.println("Error receiving packet");
+			return 0;
+		}
+		_serial->readBytes((char *)cmd, 4);
+		if (0 == memcmp(cmd, "IPD,", 4))
+		{
+			// Serial.println("GOT IPD");
+			// read slot
+			char slot = _serial->read();
+			// read separator (comma)
+			_serial->read();
+			char packetSizeString[5];
+			int sizeOfPacketSize = _serial->readBytesUntil(':', packetSizeString, 4);
+			if (sizeOfPacketSize == 0)
+			{
+				// error reading packet
+				Serial.println("Inconsistent read");
+			}
+			// Serial.print("Read string packet size ");Serial.println(packetSizeString);
+			int packetSize = atoi(packetSizeString);
+			Serial.print("Reading packet from ");Serial.print(slot);Serial.print(" size ");Serial.println(packetSize);
+			// Serial.println(_serial->peek());
+			lastAvailable = _serial->available();
+			while (receiveBufferSize[receiveBufferWrite] < packetSize)
+			{
+				receiveBuffer[receiveBufferWrite][receiveBufferSize[receiveBufferWrite]++] = _serial->read();
+				// Serial.println(receiveBuffer[receiveBufferWrite][receiveBufferSize[receiveBufferWrite]-1], HEX);
+				lastAvailable--;
+				if (lastAvailable == 0)
+				{
+					delayMicroseconds((1 / esp8266._baud) * 10 * 1E6);
+					// delay(1);
+					lastAvailable = _serial->available();
 				}
 			}
-			// Serial.print("Truncating from ");Serial.print(offset); Serial.print(" length ");Serial.print(atLen + additionalSuffixToKill);
-			// Serial.print(" remaining "); Serial.println(receiveBufferSize - atLen - additionalSuffixToKill);
-			this->truncateReceiveBufferHead(offset, atLen + additionalSuffixToKill);
-			break;
+			Serial.print("Read ");Serial.print(receiveBufferSize[receiveBufferWrite]);Serial.println(" bytes");
+			// Serial.println(lastAvailable);
+		}
+		else
+		{
+			Serial.println("Error in reading IPD");
+			for (byte i = 0; i < 4; i++)
+			{
+				Serial.println(cmd[i], HEX);
+			}
+			for(int i =0;i<_serial->available();i++) {
+				Serial.println(_serial->read(), HEX);
+			}
 		}
 	}
-	 return cleaned;
 }
 
+void ESP8266ClientReadBuffer::incrementWriteBuffer()
+{
+	if (receiveBufferSize[receiveBufferWrite] > 0)
+	{
+		receiveBufferWrite = (receiveBufferWrite + 1) % ESP8266_CLIENT_MAX_BUFFER_COUNT;
+	}
+}
+
+void ESP8266ClientReadBuffer::incrementReadBuffer()
+{
+	while (receiveBufferSize[receiveBufferRead] == 0 && receiveBufferRead != receiveBufferWrite)
+	{
+		receiveBufferRead = (receiveBufferRead + 1) % ESP8266_CLIENT_MAX_BUFFER_COUNT;
+	}
+}
